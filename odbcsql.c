@@ -21,20 +21,6 @@
 	goto Exit;					\
       }							\
   }
-/******************************************/
-/* Structure to store information about   */
-/* a column.                              */
-/******************************************/
-
-typedef struct STR_BINDING {
-  SQLSMALLINT         cDisplaySize;           /* size to display  */
-  char                *buffer;                /* display buffer   */
-  SQLLEN              indPtr;                 /* size or null     */
-  BOOL                fChar;                  /* character col?   */
-  struct STR_BINDING  *sNext;                 /* linked list      */
-} BINDING;
-
-
 
 /******************************************/
 /* Forward references                     */
@@ -47,29 +33,12 @@ void HandleDiagnosticRecord (SQLHANDLE      hHandle,
 void DisplayResults(HSTMT       hStmt,
                     SQLSMALLINT cCols);
 
-void AllocateBindings(HSTMT         hStmt,
-                      SQLSMALLINT   cCols,
-                      BINDING**     ppBinding,
-                      SQLSMALLINT*  pDisplay);
-
-void SetConsole(DWORD   cDisplaySize,
-                BOOL    fInvert);
-
 /*****************************************/
 /* Some constants                        */
 /*****************************************/
+#define MAXCOLS (100)
+#define BUFFERLEN (1024)
 
-
-#define DISPLAY_MAX 50          // Arbitrary limit on column width to display
-#define DISPLAY_FORMAT_EXTRA 3  // Per column extra display bytes (| <data> )
-#define DISPLAY_FORMAT      "%c %*.*s "
-#define DISPLAY_FORMAT_C    "%c %-*.*s "
-#define NULL_SIZE           6   // <NULL>
-#define SQL_QUERY_SIZE      1000 // Max. Num characters for SQL Query passed in.
-
-#define PIPE                '|'
-
-int   gHeight = 80;       // Users screen height
 
 int main(int argc, char **argv)
 {
@@ -87,7 +56,7 @@ int main(int argc, char **argv)
   pQuery = argv[2];
 
   // Allocate an environment
-
+  fprintf(stderr, "Allocating Handle Enviroment\n");
   if (SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &hEnv) == SQL_ERROR)
     {
       fprintf(stderr, "Unable to allocate an environment handle\n");
@@ -96,7 +65,7 @@ int main(int argc, char **argv)
 
   // Register this as an application that expects 3.x behavior,
   // you must register something if you use AllocHandle
-
+  fprintf(stderr, "Setting to ODBC3\n");
   TRYODBC(hEnv,
 	  SQL_HANDLE_ENV,
 	  SQLSetEnvAttr(hEnv,
@@ -105,13 +74,14 @@ int main(int argc, char **argv)
 			0));
 
   // Allocate a connection
+  fprintf(stderr, "Allocating Handle\n");
   TRYODBC(hEnv,
 	  SQL_HANDLE_ENV,
 	  SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &hDbc));
 
   // Connect to the driver.  Use the connection string if supplied
   // on the input, otherwise let the driver manager prompt for input.
-
+  fprintf(stderr, "Connecting to driver\n");
   TRYODBC(hDbc,
 	  SQL_HANDLE_DBC,
 	  SQLDriverConnect(hDbc,
@@ -125,6 +95,7 @@ int main(int argc, char **argv)
 
   fprintf(stderr, "Connected!\n");
 
+  fprintf(stderr, "Allocating statement\n");
   TRYODBC(hDbc,
 	  SQL_HANDLE_DBC,
 	  SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt));
@@ -133,6 +104,7 @@ int main(int argc, char **argv)
   SQLSMALLINT sNumResults;
 
   // Execute the query
+  fprintf(stderr, "Executing query\n");
   RetCode = SQLExecDirect(hStmt, pQuery, SQL_NTS);
 
   switch(RetCode)
@@ -223,15 +195,26 @@ int main(int argc, char **argv)
 void DisplayResults(HSTMT       hStmt,
                     SQLSMALLINT cCols)
 {
-  BINDING         *pFirstBinding, *pThisBinding;          
   SQLSMALLINT     cDisplaySize;
   RETCODE         RetCode = SQL_SUCCESS;
   int             iCount = 0;
   long long numReceived = 0;
 
   // Allocate memory for each column 
+  SQLCHAR buffer[MAXCOLS][BUFFERLEN];
+  SQLLEN indPtr[MAXCOLS];
+  int iCol;
 
-  //AllocateBindings(hStmt, cCols, &pFirstBinding, &cDisplaySize);
+  for (iCol = 0; iCol < cCols; iCol++) {
+    TRYODBC(hStmt,
+	    SQL_HANDLE_STMT,
+	    SQLBindCol(hStmt,
+		       iCol+1,
+		       SQL_C_CHAR,
+		       (SQLPOINTER) buffer[iCol],
+		       (BUFFERLEN) * sizeof(char),
+		       &indPtr[iCol]));    
+  }
 
   // Fetch and display the data
 
@@ -248,199 +231,20 @@ void DisplayResults(HSTMT       hStmt,
       }
     else
       {
-#if 0
+	// Display the data.   Ignore truncations	
+	printf("%s", buffer[0]);
+	for (iCol = 1; iCol < cCols; iCol++) {
+	  printf(",%s", buffer[iCol]);
+	}
+	printf("\n");
 
-	// Display the data.   Ignore truncations
-
-	for (pThisBinding = pFirstBinding;
-	     pThisBinding;
-	     pThisBinding = pThisBinding->sNext)
-	  {
-	    if (pThisBinding->indPtr != SQL_NULL_DATA)
-	      {
-		printf(pThisBinding->fChar ? DISPLAY_FORMAT_C:DISPLAY_FORMAT,
-		       PIPE,
-		       pThisBinding->cDisplaySize,
-		       pThisBinding->cDisplaySize,
-		       pThisBinding->buffer);
-	      } 
-	    else
-	      {
-		printf(DISPLAY_FORMAT_C,
-		       PIPE,
-		       pThisBinding->cDisplaySize,
-		       pThisBinding->cDisplaySize,
-		       "<NULL>");
-	      }
-	  }
-	printf(" %c\n",PIPE);
-#endif
 	numReceived++;
       }
   } while (!fNoData);
 
  Exit:
   printf("numRecieved = %lld\n", numReceived);
-
-  // Clean up the allocated buffers
-  /*
-  while (pFirstBinding)
-    {
-      pThisBinding = pFirstBinding->sNext;
-      free(pFirstBinding->buffer);
-      free(pFirstBinding);
-      pFirstBinding = pThisBinding;
-    }
-  */
 }
-
-/************************************************************************
-/* AllocateBindings:  Get column information and allocate bindings
-/* for each column.  
-/*
-/* Parameters:
-/*      hStmt      Statement handle
-/*      cCols       Number of columns in the result set
-/*      *lppBinding Binding pointer (returned)
-/*      lpDisplay   Display size of one line
-/************************************************************************/
-
-void AllocateBindings(HSTMT         hStmt,
-                      SQLSMALLINT   cCols,
-                      BINDING       **ppBinding,
-                      SQLSMALLINT   *pDisplay)
-{
-  SQLSMALLINT     iCol;
-  BINDING         *pThisBinding, *pLastBinding = NULL;
-  SQLLEN          cchDisplay, ssType;
-  SQLSMALLINT     cchColumnNameLength;
-
-  *pDisplay = 0;
-
-  for (iCol = 1; iCol <= cCols; iCol++)
-    {
-      pThisBinding = (BINDING *)(malloc(sizeof(BINDING)));
-      if (!(pThisBinding))
-        {
-	  fprintf(stderr, "Out of memory!\n");
-	  exit(-100);
-        }
-
-      if (iCol == 1)
-        {
-	  *ppBinding = pThisBinding;
-        }
-      else
-        {
-	  pLastBinding->sNext = pThisBinding;
-        }
-      pLastBinding = pThisBinding;
-
-
-      // Figure out the display length of the column (we will
-      // bind to char since we are only displaying data, in general
-      // you should bind to the appropriate C type if you are going
-      // to manipulate data since it is much faster...)
-
-      TRYODBC(hStmt,
-	      SQL_HANDLE_STMT,
-	      SQLColAttribute(hStmt,
-			      iCol,
-			      SQL_DESC_DISPLAY_SIZE,
-			      NULL,
-			      0,
-			      NULL,
-			      &cchDisplay));
-
-
-      // Figure out if this is a character or numeric column; this is
-      // used to determine if we want to display the data left- or right-
-      // aligned.
-
-      // SQL_DESC_CONCISE_TYPE maps to the 1.x SQL_COLUMN_TYPE. 
-      // This is what you must use if you want to work
-      // against a 2.x driver.
-
-      TRYODBC(hStmt,
-	      SQL_HANDLE_STMT,
-	      SQLColAttribute(hStmt,
-			      iCol,
-			      SQL_DESC_CONCISE_TYPE,
-			      NULL,
-			      0,
-			      NULL,
-			      &ssType));
-
-
-      pThisBinding->fChar = (ssType == SQL_CHAR ||
-			     ssType == SQL_VARCHAR ||
-			     ssType == SQL_LONGVARCHAR);
-
-      pThisBinding->sNext = NULL;
-
-      // Arbitrary limit on display size
-      if (cchDisplay > DISPLAY_MAX)
-	cchDisplay = DISPLAY_MAX;
-
-      // Allocate a buffer big enough to hold the text representation
-      // of the data.  Add one character for the null terminator
-
-      pThisBinding->buffer = (char *)malloc((cchDisplay+1) * sizeof(char));
-
-      if (!(pThisBinding->buffer))
-        {
-	  fprintf(stderr, "Out of memory!\n");
-	  exit(-100);
-        }
-
-      // Map this buffer to the driver's buffer.   At Fetch time,
-      // the driver will fill in this data.  Note that the size is 
-      // count of bytes (for Unicode).  All ODBC functions that take
-      // SQLPOINTER use count of bytes; all functions that take only
-      // strings use count of characters.
-
-      TRYODBC(hStmt,
-	      SQL_HANDLE_STMT,
-	      SQLBindCol(hStmt,
-			 iCol,
-			 SQL_C_TCHAR,
-			 (SQLPOINTER) pThisBinding->buffer,
-			 (cchDisplay + 1) * sizeof(char),
-			 &pThisBinding->indPtr));
-
-
-      // Now set the display size that we will use to display
-      // the data.   Figure out the length of the column name
-
-      TRYODBC(hStmt,
-	      SQL_HANDLE_STMT,
-	      SQLColAttribute(hStmt,
-			      iCol,
-			      SQL_DESC_NAME,
-			      NULL,
-			      0,
-			      &cchColumnNameLength,
-			      NULL));
-
-      pThisBinding->cDisplaySize = (SQLSMALLINT)cchDisplay;
-      if (pThisBinding->cDisplaySize < NULL_SIZE)
-	pThisBinding->cDisplaySize = NULL_SIZE;
-
-      *pDisplay += pThisBinding->cDisplaySize + DISPLAY_FORMAT_EXTRA;
-
-    }
-
-  return;
-
- Exit:
-
-  exit(-1);
-
-  return;
-}
-
-
-
 
 /************************************************************************
 /* HandleDiagnosticRecord : display error/warning information
@@ -457,8 +261,8 @@ void HandleDiagnosticRecord (SQLHANDLE      hHandle,
 {
   SQLSMALLINT iRec = 0;
   SQLINTEGER  iError;
-  char        wszMessage[1000];
-  char        wszState[SQL_SQLSTATE_SIZE+1];
+  char        message[1000];
+  char        state[SQL_SQLSTATE_SIZE+1];
 
 
   if (RetCode == SQL_INVALID_HANDLE)
@@ -470,16 +274,16 @@ void HandleDiagnosticRecord (SQLHANDLE      hHandle,
   while (SQLGetDiagRec(hType,
 		       hHandle,
 		       ++iRec,
-		       wszState,
+		       state,
 		       &iError,
-		       wszMessage,
-		       (SQLSMALLINT)(sizeof(wszMessage) / sizeof(WCHAR)),
+		       message,
+		       (SQLSMALLINT)(sizeof(message) / sizeof(WCHAR)),
 		       (SQLSMALLINT *)NULL) == SQL_SUCCESS)
     {
       // Hide data truncated..
-      if (strncmp(wszState, "01004", 5))
+      if (strncmp(state, "01004", 5))
         {
-	  fprintf(stderr, "[%5.5s] %s (%d)\n", wszState, wszMessage, iError);
+	  fprintf(stderr, "[%5.5s] %s (%d)\n", state, message, iError);
         }
     }
 
