@@ -68,7 +68,8 @@ int main(int argc, char **argv)
   
 
   // Allocate an environment
-  fprintf(stderr, "Allocating Handle Enviroment\n");
+  if (!silent)
+    fprintf(stderr, "Allocating Handle Enviroment\n");
   if (SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &hEnv) == SQL_ERROR)
     {
       fprintf(stderr, "Unable to allocate an environment handle\n");
@@ -77,7 +78,8 @@ int main(int argc, char **argv)
 
   // Register this as an application that expects 3.x behavior,
   // you must register something if you use AllocHandle
-  fprintf(stderr, "Setting to ODBC3\n");
+  if (!silent)
+    fprintf(stderr, "Setting to ODBC3\n");
   TRYODBC(hEnv,
 	  SQL_HANDLE_ENV,
 	  SQLSetEnvAttr(hEnv,
@@ -86,14 +88,16 @@ int main(int argc, char **argv)
 			0));
 
   // Allocate a connection
-  fprintf(stderr, "Allocating Handle\n");
+  if (!silent)
+    fprintf(stderr, "Allocating Handle\n");
   TRYODBC(hEnv,
 	  SQL_HANDLE_ENV,
 	  SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &hDbc));
 
   // Connect to the driver.  Use the connection string if supplied
   // on the input, otherwise let the driver manager prompt for input.
-  fprintf(stderr, "Connecting to driver\n");
+  if (!silent)
+    fprintf(stderr, "Connecting to driver\n");
   TRYODBC(hDbc,
 	  SQL_HANDLE_DBC,
 	  SQLDriverConnect(hDbc,
@@ -107,7 +111,8 @@ int main(int argc, char **argv)
 
   fprintf(stderr, "Connected!\n");
 
-  fprintf(stderr, "Allocating statement\n");
+  if (!silent)
+    fprintf(stderr, "Allocating statement\n");
   TRYODBC(hDbc,
 	  SQL_HANDLE_DBC,
 	  SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt));
@@ -116,7 +121,8 @@ int main(int argc, char **argv)
   SQLSMALLINT sNumResults;
 
   // Execute the query
-  fprintf(stderr, "Executing query\n");
+  if (!silent)
+    fprintf(stderr, "Executing query\n");
   RetCode = SQLExecDirect(hStmt, pQuery, SQL_NTS);
 
   switch(RetCode)
@@ -189,8 +195,6 @@ int main(int argc, char **argv)
     {
       SQLFreeHandle(SQL_HANDLE_ENV, hEnv);
     }
-
-  printf("\nDisconnected.\n");
 
   return 0;
 
