@@ -31,7 +31,8 @@ void HandleDiagnosticRecord (SQLHANDLE      hHandle,
 			     RETCODE        RetCode);
 
 void DisplayResults(HSTMT       hStmt,
-                    SQLSMALLINT cCols);
+                    SQLSMALLINT cCols,
+		    bool        silent);
 
 /*****************************************/
 /* Some constants                        */
@@ -47,13 +48,24 @@ int main(int argc, char **argv)
   SQLHSTMT    hStmt = NULL;
   char*       pConnStr;
   char*       pQuery;
+  bool        silent = false;
 
-  if (argc != 3) {
-    fprintf(stderr, "Usage: %s <ConnString> <Query>\n", argv[0]);
+  if ((argc != 3) && (argc != 4)) {
+    fprintf(stderr, "Usage: %s <ConnString> <Query> [silent>\n", argv[0]);
     return 1;
   }
   pConnStr = argv[1];
   pQuery = argv[2];
+  if (4 == argc) {
+    if (0 != strncmp("silent", argv[3], 6)) {
+      fprintf(stderr, "Usage: %s <ConnString> <Query> [silent>\n", argv[0]);
+      return 1;
+    }
+    else {
+      silent = true;
+    }
+  }
+  
 
   // Allocate an environment
   fprintf(stderr, "Allocating Handle Enviroment\n");
@@ -124,7 +136,7 @@ int main(int argc, char **argv)
 
 	if (sNumResults > 0)
 	  {
-	    DisplayResults(hStmt,sNumResults);
+	    DisplayResults(hStmt,sNumResults, silent);
 	  } 
 	else
 	  {
@@ -193,7 +205,8 @@ int main(int argc, char **argv)
 /************************************************************************/
 
 void DisplayResults(HSTMT       hStmt,
-                    SQLSMALLINT cCols)
+                    SQLSMALLINT cCols,
+		    bool        silent)
 {
   SQLSMALLINT     cDisplaySize;
   RETCODE         RetCode = SQL_SUCCESS;
@@ -231,12 +244,14 @@ void DisplayResults(HSTMT       hStmt,
       }
     else
       {
-	// Display the data.   Ignore truncations	
-	printf("%s", buffer[0]);
-	for (iCol = 1; iCol < cCols; iCol++) {
-	  printf(",%s", buffer[iCol]);
+	if (!silent) {
+	  // Display the data.   Ignore truncations	
+	  printf("%s", buffer[0]);
+	  for (iCol = 1; iCol < cCols; iCol++) {
+	    printf(",%s", buffer[iCol]);
+	  }
+	  printf("\n");
 	}
-	printf("\n");
 
 	numReceived++;
       }
