@@ -120,7 +120,8 @@ int main(int argc, char **argv)
   // Execute the query
   if (!silent)
     fprintf(stderr, "Executing query\n");
-  long long i, rval;
+  long long i;
+  double rval;
   for (i = 0; i < 100000; i++) {
     drand48_r(&lcg, &rval);
     sprintf(pQuery, "SELECT col1 FROM odbctest.test10 WHERE ccol = %lld", (long long)(rval * numkeys));
