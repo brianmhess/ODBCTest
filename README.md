@@ -8,7 +8,7 @@ Also includes a Cassandra C driver application for comparison.
 
 ## Data
 The data is 1B rows of schema:
-```CREATE TABLE test.test10(pkey BIGINT, ccol BIGINT, col1 BIGINT, col2 BIGINT, col3 BIGINT, col4 BIGINT, col5 BIGINT, col6 BIGINT, col7 BIGINT, col8 BIGINT, PRIMARY KEY ((pkey), ccol))```
+```CREATE TABLE otest.test10(pkey BIGINT, ccol BIGINT, col1 BIGINT, col2 BIGINT, col3 BIGINT, col4 BIGINT, col5 BIGINT, col6 BIGINT, col7 BIGINT, col8 BIGINT, PRIMARY KEY ((pkey), ccol))```
 
 For each PKEY, we generate 20 rows.  CCOL then goes from 0..19 and the rest of the columns are randomly chosen BIGINT values [0,1M).  The data is in 100 files of 10M rows each.
 

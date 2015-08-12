@@ -124,7 +124,7 @@ int main(int argc, char **argv)
   double rval;
   for (i = 0; i < 100000; i++) {
     drand48_r(&lcg, &rval);
-    sprintf(pQuery, "SELECT MAX(col1) FROM odbctest.test10 WHERE ccol = %lld", (long long)(rval * numkeys));
+    sprintf(pQuery, "SELECT MAX(col1) FROM otest.test10 WHERE ccol = %lld", (long long)(rval * numkeys));
     RetCode = SQLExecDirect(hStmt, pQuery, SQL_NTS);
 
     switch(RetCode)

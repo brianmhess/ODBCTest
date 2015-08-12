@@ -32,9 +32,9 @@ void HandleDiagnosticRecord (SQLHANDLE      hHandle,
 			     SQLSMALLINT    hType,  
 			     RETCODE        RetCode);
 
-void DisplayResults(HSTMT       hStmt,
-                    SQLSMALLINT cCols,
-		    bool        silent);
+long long  DisplayResults(HSTMT       hStmt,
+			  SQLSMALLINT cCols,
+			  bool        silent);
 
 /*****************************************/
 /* Some constants                        */
@@ -110,9 +110,6 @@ int main(int argc, char **argv)
 
   if (!silent)
     fprintf(stderr, "Allocating statement\n");
-  TRYODBC(hDbc,
-	  SQL_HANDLE_DBC,
-	  SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt));
 
   RETCODE     RetCode;
   SQLSMALLINT sNumResults;
@@ -122,9 +119,15 @@ int main(int argc, char **argv)
     fprintf(stderr, "Executing query\n");
   long long i;
   double rval;
+  long long numReceived;
   for (i = 0; i < 100000; i++) {
+    TRYODBC(hDbc,
+	    SQL_HANDLE_DBC,
+	    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt));
     drand48_r(&lcg, &rval);
-    sprintf(pQuery, "SELECT col1 FROM odbctest.test10 WHERE pkey = %lld", (long long)(rval * numkeys));
+    sprintf(pQuery, "SELECT col1 FROM otest.test10 WHERE pkey = %lld", (long long)(rval * numkeys));
+    if (!silent)
+      fprintf(stderr, "Query: %s\n", pQuery);
     RetCode = SQLExecDirect(hStmt, pQuery, SQL_NTS);
 
     switch(RetCode)
@@ -144,7 +147,8 @@ int main(int argc, char **argv)
 	  
 	  if (sNumResults > 0)
 	    {
-	      DisplayResults(hStmt,sNumResults, silent);
+	      numReceived = DisplayResults(hStmt,sNumResults, silent);
+	      fprintf(stdout, "iteration %lld: numReceived = %lld\n", i, numReceived);
 	    } 
 	  else
 	    {
@@ -174,11 +178,10 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Unexpected return code %hd!\n", RetCode);
 	
       }
+    TRYODBC(hStmt,
+	    SQL_HANDLE_STMT,
+	    SQLFreeStmt(hStmt, SQL_CLOSE));
   }
-
-  TRYODBC(hStmt,
-	  SQL_HANDLE_STMT,
-	  SQLFreeStmt(hStmt, SQL_CLOSE));
 
  Exit:
 
@@ -212,7 +215,7 @@ int main(int argc, char **argv)
 /*      cCols      Count of columns
 /************************************************************************/
 
-void DisplayResults(HSTMT       hStmt,
+long long DisplayResults(HSTMT       hStmt,
                     SQLSMALLINT cCols,
 		    bool        silent)
 {
@@ -266,7 +269,8 @@ void DisplayResults(HSTMT       hStmt,
   } while (!fNoData);
 
  Exit:
-  printf("numRecieved = %lld\n", numReceived);
+  //printf("numRecieved = %lld\n", numReceived);
+  return numReceived;
 }
 
 /************************************************************************
