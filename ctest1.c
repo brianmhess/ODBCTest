@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
 
 #include "cassandra.h"
 
@@ -173,6 +174,8 @@ int main(int argc, char **argv) {
   long long i;
   double rval;
   cass_int64_t val;
+  clock_t start = clock();
+  
   for (i = 0; i < 100000; i++) {
     numResults = 0;
     drand48_r(&lcg, &rval);
@@ -209,11 +212,15 @@ int main(int argc, char **argv) {
       cass_iterator_free(iterator);
     }
 
-    fprintf(stdout, "iteration %lld: numResults = %ld\n", i, numResults);
+    if (!silent)
+      fprintf(stdout, "iteration %lld: numResults = %ld\n", i, numResults);
 
     cass_future_free(future);
   }
   cass_statement_free(statement);
+  clock_t end = clock();
+    fprintf(stderr, "Elapsed time = %f seconds\n", ((double) (end - start)) / CLOCKS_PER_SEC);
+
 
   close_future = cass_session_close(session);
   cass_future_wait(close_future);

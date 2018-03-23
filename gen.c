@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define NUM_COLS (8)
+#define NUM_COLS (5)
 #define COL_RANGE (1000000)
+
+// cqlsh -e "CREATE TABLE test.itest5(pkey INT, ccol INT, x INT, y INT, z INT, PRIMARY KEY ((pkey), ccol))"
+
 
 int main(int argc, char **argv) {
   if (5 != argc) {

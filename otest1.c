@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <time.h>
+#include <string.h>
 
 #define SQL_QUERY "";
 
@@ -114,12 +116,16 @@ int main(int argc, char **argv)
   RETCODE     RetCode;
   SQLSMALLINT sNumResults;
 
+
+
   // Execute the query
   if (!silent)
     fprintf(stderr, "Executing query\n");
   long long i;
   double rval;
   long long numReceived;
+  clock_t start = clock();
+  
   for (i = 0; i < 100000; i++) {
     TRYODBC(hDbc,
 	    SQL_HANDLE_DBC,
@@ -182,6 +188,8 @@ int main(int argc, char **argv)
 	    SQL_HANDLE_STMT,
 	    SQLFreeStmt(hStmt, SQL_CLOSE));
   }
+  clock_t end = clock();
+  fprintf(stderr, "Elapsed time = %f seconds\n", ((double) (end - start)) / CLOCKS_PER_SEC);
 
  Exit:
 
