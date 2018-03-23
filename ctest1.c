@@ -136,7 +136,7 @@ char* get_column_as_string(const CassValue *value, char* buf, int bufsize) {
 
 int main(int argc, char **argv) {
   char *contact_points;
-  char query[] = "SELECT col1 FROM otest.test10 WHERE pkey = ?";
+  char query[] = "SELECT xml_doc_id_nbr, structure_id_nbr, create_mint_cd, last_update_system_nm, last_update_tmstp, msg_major_version_nbr, msg_minor_version_nbr, msg_payload_img, opt_lock_token_nbr FROM ks.tbl WHERE xml_doc_id_nbr = ? AND structure_id_nbr = ?";
   bool silent = true;
   
   if (argc != 5) {
@@ -172,14 +172,16 @@ int main(int argc, char **argv) {
 
   statement = cass_statement_new(query, 1);
   long long i;
-  double rval;
-  cass_int64_t val;
+  double rval, rval2;
+  cass_int64_t val, val2;
   clock_t start = clock();
   
   for (i = 0; i < 100000; i++) {
     numResults = 0;
     drand48_r(&lcg, &rval);
+    drand48_r(&lcg, &rval2);
     val = (cass_int64_t)(rval * numkeys);
+    val2 = (cass_int64_t)(rval2 * numkeys);
     cass_statement_bind_int64(statement, 0, val);
     future = cass_session_execute(session, statement);
     cass_future_wait(future);

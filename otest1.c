@@ -122,7 +122,7 @@ int main(int argc, char **argv)
   if (!silent)
     fprintf(stderr, "Executing query\n");
   long long i;
-  double rval;
+  double rval, rval2;
   long long numReceived;
   clock_t start = clock();
   
@@ -131,7 +131,8 @@ int main(int argc, char **argv)
 	    SQL_HANDLE_DBC,
 	    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt));
     drand48_r(&lcg, &rval);
-    sprintf(pQuery, "SELECT col1 FROM otest.test10 WHERE pkey = %lld", (long long)(rval * numkeys));
+    drand48_r(&lcg, &rval2);
+    sprintf(pQuery, "SELECT xml_doc_id_nbr, structure_id_nbr, create_mint_cd, last_update_system_nm, last_update_tmstp, msg_major_version_nbr, msg_minor_version_nbr, msg_payload_img, opt_lock_token_nbr FROM ks.tbl WHERE xml_doc_id_nbr = %lld AND structure_id_nbr = %lld", (long long)(rval * numkeys), (long long)(rval2 * rowsperkey);
     if (!silent)
       fprintf(stderr, "Query: %s\n", pQuery);
     RetCode = SQLExecDirect(hStmt, pQuery, SQL_NTS);
@@ -154,7 +155,8 @@ int main(int argc, char **argv)
 	  if (sNumResults > 0)
 	    {
 	      numReceived = DisplayResults(hStmt,sNumResults, silent);
-	      fprintf(stdout, "iteration %lld: numReceived = %lld\n", i, numReceived);
+	      if (!silent)
+		fprintf(stdout, "iteration %lld: numReceived = %lld\n", i, numReceived);
 	    } 
 	  else
 	    {
