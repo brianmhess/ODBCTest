@@ -132,10 +132,11 @@ int main(int argc, char **argv)
 	    SQL_HANDLE_DBC,
 	    SQLAllocHandle(SQL_HANDLE_STMT, hDbc, &hStmt));
     drand48_r(&lcg, &rval);
-    drand48_r(&lcg, &rval2);
+    //drand48_r(&lcg, &rval2);
     tval = (long long)(rval * numkeys);
-    tval2 = (tval * 100) + (long long)(rval2 * rowsperkey);
-    sprintf(pQuery, "SELECT xml_doc_id_nbr, structure_id_nbr, create_mint_cd, last_update_system_nm, last_update_tmstp, msg_major_version_nbr, msg_minor_version_nbr, msg_payload_img, opt_lock_token_nbr FROM ks.tbl WHERE xml_doc_id_nbr = %lld AND structure_id_nbr = %lld", tval, tval2);
+    //tval2 = (tval * 100) + (long long)(rval2 * rowsperkey);
+    //sprintf(pQuery, "SELECT xml_doc_id_nbr, structure_id_nbr, create_mint_cd, last_update_system_nm, last_update_tmstp, msg_major_version_nbr, msg_minor_version_nbr, msg_payload_img, opt_lock_token_nbr FROM ks.tbl WHERE xml_doc_id_nbr = %lld", tval);
+    sprintf(pQuery, "SELECT xml_doc_id_nbr, COUNT(*) FROM ks.tbl WHERE xml_doc_id_nbr = %lld GROUP BY xml_doc_id_nbr", tval);
     if (!silent)
       fprintf(stderr, "Query: %s\n", pQuery);
     RetCode = SQLExecDirect(hStmt, pQuery, SQL_NTS);

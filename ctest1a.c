@@ -136,9 +136,10 @@ char* get_column_as_string(const CassValue *value, char* buf, int bufsize) {
 
 int main(int argc, char **argv) {
   char *contact_points;
-  char query[] = "SELECT xml_doc_id_nbr, structure_id_nbr, create_mint_cd, last_update_system_nm, last_update_tmstp, msg_major_version_nbr, msg_minor_version_nbr, msg_payload_img, opt_lock_token_nbr FROM ks.tbl WHERE xml_doc_id_nbr = ? AND structure_id_nbr = ?";
+  //char query[] = "SELECT xml_doc_id_nbr, structure_id_nbr, create_mint_cd, last_update_system_nm, last_update_tmstp, msg_major_version_nbr, msg_minor_version_nbr, msg_payload_img, opt_lock_token_nbr FROM ks.tbl WHERE xml_doc_id_nbr = ?";
+  char query[] = "SELECT xml_doc_id_nbr, COUNT(*) FROM ks.tbl WHERE xml_doc_id_nbr = ? GROUP BY xml_doc_id_nbr";
   bool silent = true;
-  
+
   if (argc != 5) {
     fprintf(stderr, "Usage: %s <contact_points> <pkey range> <ccol range> <rand seed>\n", argv[0]);
     return 1;
@@ -178,16 +179,16 @@ int main(int argc, char **argv) {
   clock_t start = clock();
   
   for (i = 0; i < 100000; i++) {
-    statement = cass_statement_new(query, 2);
+    statement = cass_statement_new(query, 1);
     numResults = 0;
     drand48_r(&lcg, &rval);
-    drand48_r(&lcg, &rval2);
+    //drand48_r(&lcg, &rval2);
     tval = (long long)(rval * numkeys);
-    tval2 = (tval * 100) + (long long)(rval2 * rowsperkey);
+    //tval2 = (tval * 100) + (long long)(rval2 * rowsperkey);
     val = (cass_int64_t)tval;
     val2 = (cass_int32_t)tval2;
     cass_statement_bind_int64(statement, 0, val);
-    cass_statement_bind_int32(statement, 1, val2);
+    //cass_statement_bind_int32(statement, 1, val2);
     future = cass_session_execute(session, statement);
     cass_future_wait(future);
 
